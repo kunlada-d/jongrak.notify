@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานประจำวันจงรักหลอมทอง</title>
+    <!-- Tailwind CSS และ Google Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" sizes="192x192" href="https://drive.google.com/uc?export=view&id=ID_19U-CS-zBHwGsLdxX0ZG1ey_e9CaEpG6D">
+   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        body {
+           font-family: 'IBM Plex Sans Thai', sans-serif;
+            background: #f4f7fb !important;
+            color: #1e293b !important;
+        }
+
+        *, ::before, ::after {
+            border-color: transparent !important;
+            border-width: 0px !important;
+        }
+
+        /* --------------------------
+        HEADER
+        --------------------------- */
+        header {
+            background: rgba(255,255,255,.9)!important;
+            backdrop-filter: blur(18px);
+            border-bottom: 1px solid transparent !important;
+            box-shadow: 0 2px 12px rgba(15,23,42,.05);
+        }
+
+        header h1 {
+            color: #111827!important;
+            background: none!important;
+        }
+
+        header p {
+            color: #64748b!important;
+        }
+
+        /* --------------------------
+        CARD & SUMMARY STYLES
+        --------------------------- */
+        .bg-white {
+            background: #ffffff!important;
+        }
+
+        .rounded-3xl,
+        .rounded-2xl {
+            border-radius: 18px!important;
+        }
+
+        .shadow-xl,
+        .shadow-lg {
+            box-shadow: 0 8px 24px rgba(15,23,42,.05)!important;
+        }
+
+        /* --------------------------
+        TABLE STYLES
+        --------------------------- */
+        thead {
+            background: rgba(255, 255, 255, 0.4)!important;
+        }
+
+        tbody tr {
+            transition: .2s;
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.5)!important;
+        }
+
+        /* --------------------------
+           UX CUSTOM PASTEL BACKGROUNDS (พื้นหลังแยกสีตามประเภทแต่ละส่วนตาม Figma)
+        --------------------------- */
+        .bg-summary-total { background: #fff3eb !important; color: #b45309 !important; }
+        .bg-summary-expense { background: #fff1f2 !important; color: #be123c !important; }
+        .bg-summary-transfer { background: #f0fdf4 !important; color: #15803d !important; }
+        
+        /* สีกรอบพาสเทลสำหรับสาขาหลัก */
+        .card-tp-pastel { background: #fffbeb !important; }
+        .card-nk-pastel { background: #f0fdfa !important; }
+        .card-n1-pastel { background: #eff6ff !important; }
+        .card-n2-pastel { background: #f5f3ff !important; }
+        
+        /* ตารางสรุปรวมหลัก */
+        .card-total-table { background: #f8fafc !important; }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen pb-24 selection:bg-blue-100 selection:text-blue-900">
+    <header class="sticky top-0 z-40 bg-slate-50/80">
+    <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center gap-3 text-center">
+        
+        <!-- ส่วนหัวข้อและสถานะ (จัดกึ่งกลาง) -->
+        <div class="flex flex-col items-center justify-center">
+            <h1 class="text-lg sm:text-xl lg:text-2xl font-extrabold tracking-tight text-slate-900">
+                รายงานประจำวัน จงรักหลอมทอง
+            </h1>
+           
+            <p class="text-slate-500 text-xs mt-1 flex items-center justify-center gap-1.5 font-medium">
+                <span id="live-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span> 
+                <span id="connection-status">กำลังเชื่อมต่อข้อมูล...</span>
+            </p>
+        </div>
+        
+        <!-- ส่วนแสดงวันที่ประมวลผล (จัดกึ่งกลางด้านล่างหัวข้อ) -->
+        <div class="flex items-center justify-center ">
+            <div class="flex items-center gap-2  px-4 py-2 rounded-xl ">
+                <span class="text-xs font-bold text-slate-500 whitespace-nowrap">
+                    ยอดประจำวัน:
+                </span>
+                <span id="report-date-badge" class="text-xs sm:text-sm font-extrabold text-blue-600 font-mono">-</span>
+            </div>
+        </div>
+
+    </div>
+</header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 sm:py-8 sm:px-6 lg:px-8 ">
+
+        <!-- แถบแจ้งเตือนสถานะการเชื่อมต่อข้อมูล -->
+        <div id="sync-notice" class="hidden rounded-xl p-4 text-xs leading-relaxed transition-all duration-300"></div>
+
+        <!-- ================= SECTION 1: TOP SUMMARY DASHBOARD ================= -->
+        <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm relative overflow-hidden border border-slate-100">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-6">
+                <h2 class="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    ยอดรวมผลการดำเนินงานทุกสาขา
+                </h2>
+                <span class="text-xs text-blue-800 font-bold bg-blue-50 px-3 py-1 rounded-lg" id="dashboard-date-label">วันที่: -</span>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                
+                <div class="bg-summary-total p-5 rounded-2xl transition-all">
+                    <p class="text-xs font-bold opacity-80">รวมยอดรับซื้อทั้งหมด</p>
+                    <p class="text-lg sm:text-2xl lg:text-3xl font-black font-mono mt-2 truncate text-amber-600" id="total-buy">0.00 <span class="text-xs font-medium opacity-75">บาท</span></p>
+                </div>
+               
+                <div class="bg-summary-expense p-5 rounded-2xl transition-all">
+                    <p class="text-xs font-bold opacity-80">รายจ่าย / จำนำ</p>
+                    <p class="text-lg sm:text-2xl lg:text-3xl font-black font-mono mt-2 truncate text-rose-600" id="total-expense">0.00 <span class="text-xs font-medium opacity-75">บาท</span></p>
+                </div>
+               
+                <div class="bg-summary-transfer p-5 rounded-2xl sm:col-span-2 md:col-span-1 transition-all">
+                    <p class="text-xs font-bold opacity-80">เติมเงิน / รับเข้า / ไถ่</p>
+                    <p class="text-xl sm:text-2xl lg:text-3xl font-black font-mono mt-2 truncate text-emerald-600" id="total-transfer">0.00 <span class="text-xs font-medium opacity-75">บาท</span></p>
+                </div>
+            </div>
+        </div>
+
+    
+        <div class="card-total-table rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+            <div class="px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-100/60">
+                <h3 class="text-xs sm:text-sm font-bold text-slate-800">
+                    สรุปรายการรับซื้อแยกตามประเภท
+                </h3>
+                <span class="text-[10px] sm:text-[11px] bg-blue-100 text-blue-800 px-3 py-1 rounded-md font-bold shrink-0">ยอดรวมทั้งหมด</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs sm:text-sm text-left border-collapse min-w-[420px]">
+                    <thead>
+                        <tr class="bg-slate-200/40 text-slate-500 font-semibold text-[10px] sm:text-xs uppercase tracking-wider">
+                            <th class="px-4 sm:px-6 py-3 sm:py-4">รายการ</th>
+                            <th class="px-4 sm:px-6 py-3 sm:py-4 text-right">น้ำหนักรวม (g)</th>
+                            <th class="px-4 sm:px-6 py-3 sm:py-4 text-right">จำนวนเงินรวม (บาท)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 font-mono text-slate-700">
+                        <tr>
+                            <td class="px-4 sm:px-6 py-3.5 font-sans font-medium text-slate-800">ทอง</td>
+                            <td class="px-4 sm:px-6 py-3 text-right font-semibold text-slate-900" id="row-gold-weight">0.00</td>
+                            <td class="px-4 sm:px-6 py-3 text-right font-bold text-blue-600" id="row-gold-price">0.00</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 sm:px-6 py-3 font-sans font-medium text-slate-800">เงิน</td>
+                            <td class="px-4 sm:px-6 py-3 text-right font-semibold text-slate-900" id="row-silver-weight">0.00</td>
+                            <td class="px-4 sm:px-6 py-3 text-right font-bold text-blue-600" id="row-silver-price">0.00</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 sm:px-6 py-3 font-sans font-medium text-slate-800">นาก</td>
+                            <td class="px-4 sm:px-6 py-3 text-right font-semibold text-slate-900" id="row-pinkgold-weight">0.00</td>
+                            <td class="px-4 sm:px-6 py-3 text-right font-bold text-blue-600" id="row-pinkgold-price">0.00</td>
+                        </tr>
+                        <tr class="bg-orange-50/20 font-bold">
+                            <td class="px-4 sm:px-6 py-3.5 font-sans text-orange-950">ทอง 96.5%</td>
+                            <td class="px-4 sm:px-6 py-3.5 text-right text-orange-900" id="row-g965-weight">0.00</td>
+                            <td class="px-4 sm:px-6 py-3.5 text-right text-orange-950" id="row-g965-price">0.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= SECTION 2: 2 สาขาหลัก (มีปิดยอดบัญชี) ================= -->
+        <div class="space-y-4">
+            <div class="px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-100/60">
+            <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2 margin-top-6">
+                กลุ่มสาขาหลัก 
+            </h3></div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- สาขาธาตุพนม (น้าตุ๊) -->
+                <div class="card-tp-pastel rounded-2xl overflow-hidden flex flex-col justify-between shadow-sm border border-amber-100">
+                    <div class="px-5 py-4 bg-amber-500/5 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-slate-950 text-base">สาขา ธาตุพนม</span>
+                            <div class="text-[11px] text-slate-500 font-medium mt-0.5">พนักงานรับผิดชอบ: <span class="underline">น้าตุ๊</span></div>
+                        </div>
+                        <span class="bg-amber-100/60 text-amber-800 text-[10px] font-bold px-3 py-1 rounded-lg uppercase">สาขาหลัก</span>
+                    </div>
+                    
+                    <div class="p-3 sm:p-5 space-y-4">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs font-mono font-medium text-slate-600">
+                                <thead>
+                                    <tr class="text-slate-400 text-[10px] font-sans border-b border-slate-100 pb-2">
+                                        <th class="pb-2 text-left">รายการ</th>
+                                        <th class="pb-2 text-right">นน.(g)</th>
+                                        <th class="pb-2 text-right">รวมเป็นเงิน</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">ทอง</td>
+                                        <td class="text-right" id="tp-gold-w">0.00</td>
+                                        <td class="text-right font-bold text-blue-600" id="tp-gold-p">0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">เงิน</td>
+                                        <td class="text-right" id="tp-silver-w">0.00</td>
+                                        <td class="text-right font-bold text-blue-600" id="tp-silver-p">0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">นาก</td>
+                                        <td class="text-right" id="tp-pink-w">0.00</td>
+                                        <td class="text-right font-bold text-blue-600" id="tp-pink-p">0.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- รายละเอียดการปิดยอดบัญชี -->
+                        <div class="pt-4 bg-white/70 p-3 sm:p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5 text-xs font-semibold border border-amber-100/50">
+                            <div class="flex justify-between text-slate-500"><span>รายจ่าย:</span><span class="font-mono text-slate-950" id="tp-expense">0.00</span></div>
+                            <div class="flex justify-between text-slate-500"><span>เงินต้นวัน:</span><span class="font-mono text-slate-950" id="tp-opening">0.00</span></div>
+                            <div class="flex justify-between text-slate-500"><span>เติมเงิน/รับเข้า:</span><span class="font-mono text-slate-950" id="tp-cash-in">0.00</span></div>
+                            <div class="flex justify-between text-slate-500"><span>เงินคงเหลือ:</span><span class="font-mono text-slate-950" id="tp-closing">0.00</span></div>
+                            
+                            <div class="col-span-1 sm:col-span-2 flex justify-between items-center p-3 bg-amber-500/10 rounded-xl text-amber-950 mt-1 gap-1">
+                                <span class="font-bold text-[11px] sm:text-xs">พนักงานแจ้งปิดยอด:</span>
+                                <span class="font-mono text-sm sm:text-base font-extrabold text-blue-600" id="tp-actual">0.00</span>
+                            </div>
+                            <div class="col-span-1 sm:col-span-2 flex justify-between text-[11px] text-slate-500 px-1 pt-1">
+                                <span>ส่วนต่าง (ขาด / เกิน):</span>
+                                <span class="font-mono font-bold" id="tp-diff">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- สาขานครพนม (น้าต้อย) -->
+                <div class="card-nk-pastel rounded-2xl overflow-hidden flex flex-col justify-between shadow-sm border border-teal-100">
+                    <div class="px-5 py-4 bg-teal-500/5 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-slate-900 text-base">สาขา นครพนม</span>
+                            <div class="text-[11px] text-slate-500 font-medium mt-0.5">พนักงานรับผิดชอบ: <span class="underline">น้าต้อย</span></div>
+                        </div>
+                        <span class="bg-teal-100 text-teal-800 text-[10px] font-bold px-3 py-1 rounded-lg uppercase">สาขาหลัก</span>
+                    </div>
+                    
+                    <div class="p-3 sm:p-5 space-y-4">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs font-mono font-medium text-slate-600">
+                                <thead>
+                                    <tr class="text-slate-400 text-[10px] font-sans border-b border-slate-100 pb-2">
+                                        <th class="pb-2 text-left">รายการ</th>
+                                        <th class="pb-2 text-right">นน.(g)</th>
+                                        <th class="pb-2 text-right">รวมเป็นเงิน</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">ทอง</td>
+                                        <td class="text-right" id="nk-gold-w">0.00</td>
+                                        <td class="text-right font-bold text-blue-600" id="nk-gold-p">0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">เงิน</td>
+                                        <td class="text-right" id="nk-silver-w">0.00</td>
+                                        <td class="text-right font-bold text-blue-600" id="nk-silver-p">0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">นาก</td>
+                                        <td class="text-right" id="nk-pink-w">0.00</td>
+                                        <td class="text-right font-bold text-blue-600" id="nk-pink-p">0.00</td>
+                                    </tr>
+                                    <tr class="bg-orange-50/10 font-bold">
+                                        <td class="py-2 px-1 font-sans text-blue-800">ทอง 96.5%</td>
+                                        <td class="text-right text-blue-700" id="nk-g965-w">0.00</td>
+                                        <td class="text-right text-blue-800" id="nk-g965-p">0.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- รายละเอียดการปิดยอดบัญชี -->
+                        <div class="pt-4 bg-white/60 p-3 sm:p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5 text-xs font-semibold border border-teal-100/50">
+                            <div class="flex justify-between text-slate-500"><span>รายจ่าย/จำนำ:</span><span class="font-mono text-slate-950" id="nk-expense">0.00</span></div>
+                            <div class="flex justify-between text-slate-500"><span>เงินต้นวัน:</span><span class="font-mono text-slate-950" id="nk-opening">0.00</span></div>
+                            <div class="flex justify-between text-slate-500"><span>เติมเงิน/รับเข้า:</span><span class="font-mono text-slate-950" id="nk-cash-in">0.00</span></div>
+                            <div class="flex justify-between text-slate-500"><span>เงินคงเหลือ:</span><span class="font-mono text-slate-950" id="nk-closing">0.00</span></div>
+                            
+                            <div class="col-span-1 sm:col-span-2 flex justify-between items-center p-3 bg-teal-500/10 rounded-xl text-teal-950 mt-1 gap-1">
+                                <span class="font-bold text-[11px] sm:text-xs">พนักงานแจ้งปิดยอด:</span>
+                                <span class="font-mono text-sm sm:text-base font-extrabold text-teal-600" id="nk-actual">ยังไม่ปิดยอด</span>
+                            </div>
+                            <div class="col-span-1 sm:col-span-2 flex justify-between text-[11px] text-slate-500 px-1 pt-1">
+                                <span>ส่วนต่าง (ขาด / เกิน):</span>
+                                <span class="font-mono font-bold text-blue-600" id="nk-diff">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= SECTION 3: 2 สาขาย่อย (มีแค่รับซื้อ ไม่ปิดยอดบัญชี) ================= -->
+        <div class="space-y-4">
+             <div class="px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-100/60">
+            <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                กลุ่ม VIP / ลูกค้ารายใหญ่ 
+            </h3></div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- คุณหนึ่ง -->
+                <div class="card-n1-pastel rounded-2xl overflow-hidden flex flex-col justify-between shadow-sm border border-blue-100">
+                    <div class="px-5 py-3.5 bg-blue-500/5 flex justify-between items-center">
+                        <span class="font-bold text-sm text-slate-800">ลูกค้า VIP: คุณหนึ่ง</span>
+                        <span class="text-[10px] bg-blue-100 text-blue-800 px-3 py-1 font-semibold rounded-lg">รายงานเฉพาะรับซื้อ</span>
+                    </div>
+                    <div class="p-3 sm:p-5">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs font-mono font-medium text-slate-600">
+                                <thead>
+                                    <tr class="text-slate-400 text-[10px] font-sans border-b border-slate-100 pb-2">
+                                        <th class="pb-2 text-left">รายการ</th>
+                                        <th class="pb-2 text-right">นน.(g)</th>
+                                        <th class="pb-2 text-right">รวมเป็นเงิน</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">ทอง</td>
+                                        <td class="text-right text-slate-500" id="n1-gold-w">0.00</td>
+                                        <td class="text-right text-slate-500" id="n1-gold-p">0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">เงิน</td>
+                                        <td class="text-right text-slate-500" id="n1-silver-w">0.00</td>
+                                        <td class="text-right text-slate-500" id="n1-silver-p">0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">นาก</td>
+                                        <td class="text-right" id="n1-pink-w">0.00</td>
+                                        <td class="text-right text-slate-500" id="n1-pink-p">0.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- คุณสอง -->
+                <div class="card-n2-pastel rounded-2xl overflow-hidden flex flex-col justify-between shadow-sm border border-purple-100">
+                    <div class="px-5 py-3.5 bg-purple-500/5 flex justify-between items-center">
+                        <span class="font-bold text-sm text-slate-800">ลูกค้า VIP: คุณสอง</span>
+                        <span class="text-[10px] bg-purple-100 text-purple-800 px-3 py-1 font-semibold rounded-lg">รายงานเฉพาะรับซื้อ</span>
+                    </div>
+                    <div class="p-4 sm:p-5">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs font-mono text-slate-600">
+                                <thead>
+                                    <tr class="text-slate-400 text-[10px] font-sans border-b border-slate-100 pb-2">
+                                        <th class="pb-2 text-left">รายการ</th>
+                                        <th class="pb-2 text-right">นน.(g)</th>
+                                        <th class="pb-2 text-right">รวมเป็นเงิน</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">ทอง</td>
+                                        <td class="text-right text-slate-500" id="n2-gold-w">0.00</td>
+                                        <td class="text-right text-slate-500" id="n2-gold-p">0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">เงิน</td>
+                                        <td class="text-right" id="n2-silver-w">0.00</td>
+                                        <td class="text-right text-slate-500" id="n2-silver-p">0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2.5 font-sans text-slate-800">นาก</td>
+                                        <td class="text-right" id="n2-pink-w">0.00</td>
+                                        <td class="text-right text-slate-500" id="n2-pink-p">0.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Script สำหรับดึงข้อมูลจากลิงก์ Google Sheets CSV อัปเดตเรียลไทม์จริง -->
+    <script>
+        // กำหนด ID ของ Spreadsheet และ GID ของแผ่นงาน Notify
+        const SPREADSHEET_ID = '1PuHFzpUY3s_ZMRrH5m7cZWIEE7xSiePbgfx_Ts3F9D8';
+        const GID = '1018195145';
+
+        // ฟังก์ชันแปลงตัวเลขให้สะอาด
+        function cleanNumber(val) {
+            if (!val) return 0;
+            const cleaned = val.toString().replace(/[\"฿\s,g]/g, '');
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+
+        // แปลงตัวเลขเป็นทศนิยมสกุลเงินไทย
+        function formatMoney(num) {
+            return num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatDateDisplay(rawDate) {
+    if (!rawDate) return "-";
+
+    // กรณีข้อมูลมาเป็นตัวเลข Serial Number ของ Excel/Sheets (เช่น 46211)
+    if (!isNaN(rawDate) && Number(rawDate) > 40000) {
+        const excelEpoch = new Date(1899, 11, 30);
+        const targetDate = new Date(excelEpoch.getTime() + rawDate * 24 * 60 * 60 * 1000);
+        
+        // ใช้ toLocaleDateString เพื่อดึงเฉพาะชื่อเดือนภาษาไทย และดึงปี ค.ศ. ตรงๆ
+        const day = targetDate.getDate();
+        const monthName = targetDate.toLocaleDateString('th-TH', { month: 'long' });
+        const yearCE = targetDate.getFullYear(); // ค.ศ.
+        
+        return `${day} ${monthName} ${yearCE}`;
+    }
+
+    // กรณีข้อมูลมาเป็นรูปแบบ String มีเครื่องหมาย / (เช่น 8/7/2026 หรือ 8/7/2569)
+    const parts = rawDate.toString().split('/');
+    if (parts.length === 3) {
+        const day = parseInt(parts[0]);
+        const monthIndex = parseInt(parts[1]) - 1;
+        let year = parseInt(parts[2]);
+        
+        // ถ้าปีที่ส่งมาเป็น พ.ศ. (เกิน 2500) ให้แปลงกลับเป็น ค.ศ. ก่อนเพื่อความชัวร์ในการทำ Date Object
+        if (year > 2500) year -= 543; 
+        
+        const targetDate = new Date(year, monthIndex, day);
+        const monthName = targetDate.toLocaleDateString('th-TH', { month: 'long' });
+        const yearCE = targetDate.getFullYear();
+        
+        return `${day} ${monthName} ${yearCE}`;
+    }
+
+    return rawDate;
+}
+
+        // -------------------------------------------------------------
+        // ระบบ JSONP Connection (แก้ปัญหาเรื่อง CORS แบบถาวร 100%)
+        // -------------------------------------------------------------
+        function fetchSheetData() {
+            const statusEl = document.getElementById('connection-status');
+            const liveDot = document.getElementById('live-dot');
+            const noticeEl = document.getElementById('sync-notice');
+
+            statusEl.innerText = "กำลังดึงข้อมูลเรียลไทม์...";
+            liveDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 animate-pulse";
+
+            // ลบ Script เก่าออกเพื่อความสะอาด
+            const oldScript = document.getElementById('gviz-jsonp');
+            if (oldScript) {
+                oldScript.remove();
+            }
+
+            // สร้าง Dynamic Script Tag เพื่อยิงผ่าน Visualization API (JSONP / No-CORS)
+            const script = document.createElement('script');
+            script.id = 'gviz-jsonp';
+            // ระบุ Callback ฟังก์ชันให้เรียกกลับมาประมวลผลที่ handleGvizResponse
+            script.src = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=responseHandler:handleGvizResponse&gid=${GID}&t=${Date.now()}`;
+            
+            script.onerror = function() {
+                console.error("JSONP script loading failed. Render fallback data.");
+                statusEl.innerText = "การเชื่อมต่อขัดข้อง แสดงข้อมูลสำรอง";
+                liveDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0";
+                
+                noticeEl.className = "bg-amber-50 text-amber-800 rounded-xl p-4 text-xs leading-relaxed border border-amber-100";
+                noticeEl.innerHTML = `⚠️ <b>ไม่สามารถอัปเดตข้อมูลสดได้ในขณะนี้:</b> ระบบได้สลับไปใช้ชุดข้อมูลออฟไลน์ชุดล่าสุดแทนชั่วคราว`;
+                noticeEl.classList.remove('hidden');
+                
+                renderFallbackData();
+            };
+
+            document.body.appendChild(script);
+        }
+
+        // ฟังก์ชัน Callback รองรับผลลัพธ์จาก Google Visualization API
+        window.handleGvizResponse = function(response) {
+            const statusEl = document.getElementById('connection-status');
+            const liveDot = document.getElementById('live-dot');
+            const noticeEl = document.getElementById('sync-notice');
+
+            try {
+                if (!response || !response.table) {
+                    throw new Error("Invalid response format from Google Spreadsheet API");
+                }
+
+                const table = response.table;
+                const rows = table.rows;
+                const formattedRows = [];
+
+                // แปลงผลลัพธ์ของ Google JSON ให้เป็นโครงสร้าง Array ปกติคล้าย CSV เพื่อให้ตัว Parser เก่าสามารถทำงานได้ต่อเนื่อง
+                for (let r = 0; r < rows.length; r++) {
+                    const cells = rows[r].c;
+                    const rowData = [];
+                    for (let c = 0; cells && c < cells.length; c++) {
+                        const cell = cells[c];
+                        rowData.push(cell && cell.v !== null ? cell.v.toString() : "");
+                    }
+                    formattedRows.push(rowData);
+                }
+
+                // นำโครงสร้างที่แปลงได้ไปเรนเดอร์ในหน้าเพจ
+                renderDataFromRows(formattedRows);
+
+                statusEl.innerText = "เชื่อมต่อและดึงข้อมูลสำเร็จ";
+                liveDot.className = "w-2.5 h-2.5 rounded-full bg-red-500 shrink-0";
+                
+
+            } catch (error) {
+                console.error("Error processing spreadsheet response:", error);
+                statusEl.innerText = "ประมวลผลล้มเหลว แสดงข้อมูลสำรอง";
+                liveDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0";
+                renderFallbackData();
+            }
+        };
+
+        // ฟังก์ชันช่วยประมวลผลข้อมูลลงตามโครงสร้าง
+        function renderDataFromRows(rows) {
+            // ฟังก์ชันช่วยดึงแถวตามคำค้นหาแรกเริ่มของบรรทัด
+            const findRow = (keyword) => {
+                return rows.find(r => r[1] && r[1].trim() === keyword);
+            };
+
+            // ตัวแปรและฟังก์ชันดึงค่าแถวแบบยืดหยุ่นสูง (Dynamic Offset Map)
+            const getRowData = (keyword) => {
+                const row = rows.find(r => r.some(cell => cell && cell.trim() === keyword));
+                if (!row) return null;
+                const kwIdx = row.findIndex(cell => cell && cell.trim() === keyword);
+                return {
+                    getVal: (offset) => {
+                        const cellVal = row[kwIdx + offset];
+                        return cellVal ? cellVal.trim() : "";
+                    }
+                };
+            };
+
+            // ค้นหาข้อมูลสรุปและวันที่จากหัวตาราง
+            let reportDate = "8/7/2026";
+            let totalBuyAmount = 266554.00;
+
+            const headerRow = rows.find(r => r.some(c => c && c.includes("รวมรับซื้อ")));
+            if (headerRow) {
+                const dateIdx = headerRow.findIndex(c => c && c.includes("วันที่"));
+                if (dateIdx !== -1 && headerRow[dateIdx + 1]) {
+                    reportDate = headerRow[dateIdx + 1];
+                }
+                const buyIdx = headerRow.findIndex(c => c && c.includes("รวมรับซื้อ"));
+                if (buyIdx !== -1 && headerRow[buyIdx + 2]) {
+                    totalBuyAmount = cleanNumber(headerRow[buyIdx + 2]);
+                }
+            }
+
+            // โหลดโมเดลแถวของประเภททอง/เงิน/นาก/บัญชีแยกสาขา
+            const gold = getRowData("ทอง");
+            const silver = getRowData("เงิน");
+            const pinkgold = getRowData("นาก");
+            const g965 = getRowData("ทอง 96.5");
+
+            const expense = getRowData("รายจ่าย/จำนำ");
+            const cashIn = getRowData("เติมเงิน/รับเข้า/ไถ่");
+            const opening = getRowData("เงินต้นวัน");
+            const closing = getRowData("เงินคงเหลือ");
+            const actual = getRowData("พนักงานแจ้งปิดยอด");
+            const diff = getRowData("ขาด/เกิน");
+
+            // --- 1. สรุปข้อมูลภาพรวม (Top Summary) ---
+            const totalExpense = expense ? cleanNumber(expense.getVal(2)) : 0;
+            const totalTransfer = cashIn ? cleanNumber(cashIn.getVal(2)) : 0;
+
+            const formattedDate = formatDateDisplay(reportDate);
+            document.getElementById('dashboard-date-label').innerText = `วันที่: ${formattedDate}`;
+            document.getElementById('report-date-badge').innerText = formattedDate;
+
+            document.getElementById('total-buy').innerHTML = `${formatMoney(totalBuyAmount)} <span class="text-xs font-normal opacity-75">บาท</span>`;
+            document.getElementById('total-expense').innerHTML = `${formatMoney(totalExpense)} <span class="text-xs font-normal opacity-75">บาท</span>`;
+            document.getElementById('total-transfer').innerHTML = `${formatMoney(totalTransfer)} <span class="text-xs font-normal opacity-75">บาท</span>`;
+
+            // --- 2. ตารางสัดส่วนรวมทุกประเภท (รวมทั้งสี่คน) ---
+            if (gold) {
+                document.getElementById('row-gold-weight').innerText = formatMoney(cleanNumber(gold.getVal(1)));
+                document.getElementById('row-gold-price').innerText = formatMoney(cleanNumber(gold.getVal(2)));
+            }
+            if (silver) {
+                document.getElementById('row-silver-weight').innerText = formatMoney(cleanNumber(silver.getVal(1)));
+                document.getElementById('row-silver-price').innerText = formatMoney(cleanNumber(silver.getVal(2)));
+            }
+            if (pinkgold) {
+                document.getElementById('row-pinkgold-weight').innerText = formatMoney(cleanNumber(pinkgold.getVal(1)));
+                document.getElementById('row-pinkgold-price').innerText = formatMoney(cleanNumber(pinkgold.getVal(2)));
+            }
+            if (g965) {
+                document.getElementById('row-g965-weight').innerText = formatMoney(cleanNumber(g965.getVal(1)));
+                document.getElementById('row-g965-price').innerText = formatMoney(cleanNumber(g965.getVal(2)));
+            }
+
+            // --- 3. สาขา ธาตุพนม ---
+            if (gold) {
+                document.getElementById('tp-gold-w').innerText = formatMoney(cleanNumber(gold.getVal(3)));
+                document.getElementById('tp-gold-p').innerText = formatMoney(cleanNumber(gold.getVal(4)));
+            }
+            if (silver) {
+                document.getElementById('tp-silver-w').innerText = formatMoney(cleanNumber(silver.getVal(3)));
+                document.getElementById('tp-silver-p').innerText = formatMoney(cleanNumber(silver.getVal(4)));
+            }
+            if (pinkgold) {
+                document.getElementById('tp-pink-w').innerText = formatMoney(cleanNumber(pinkgold.getVal(3)));
+                document.getElementById('tp-pink-p').innerText = formatMoney(cleanNumber(pinkgold.getVal(4)));
+            }
+
+            document.getElementById('tp-expense').innerText = expense ? formatMoney(cleanNumber(expense.getVal(4))) : "0.00";
+            document.getElementById('tp-opening').innerText = opening ? formatMoney(cleanNumber(opening.getVal(4))) : "0.00";
+            document.getElementById('tp-cash-in').innerText = cashIn ? formatMoney(cleanNumber(cashIn.getVal(4))) : "0.00";
+            document.getElementById('tp-closing').innerText = closing ? formatMoney(cleanNumber(closing.getVal(4))) : "0.00";
+            document.getElementById('tp-actual').innerText = actual ? formatMoney(cleanNumber(actual.getVal(4))) : "0.00";
+            
+            if (diff) {
+                const diffVal = cleanNumber(diff.getVal(4));
+                const diffEl = document.getElementById('tp-diff');
+                diffEl.innerText = formatMoney(diffVal);
+                if (diffVal < 0) {
+                    diffEl.className = "font-mono font-bold text-rose-600";
+                } else if (diffVal > 0) {
+                    diffEl.className = "font-mono font-bold text-emerald-600";
+                } else {
+                    diffEl.className = "font-mono font-bold text-slate-500";
+                }
+            }
+
+            // --- 4. สาขา นครพนม ---
+            if (gold) {
+                document.getElementById('nk-gold-w').innerText = formatMoney(cleanNumber(gold.getVal(5)));
+                document.getElementById('nk-gold-p').innerText = formatMoney(cleanNumber(gold.getVal(6)));
+            }
+            if (silver) {
+                document.getElementById('nk-silver-w').innerText = formatMoney(cleanNumber(silver.getVal(5)));
+                document.getElementById('nk-silver-p').innerText = formatMoney(cleanNumber(silver.getVal(6)));
+            }
+            if (pinkgold) {
+                document.getElementById('nk-pink-w').innerText = formatMoney(cleanNumber(pinkgold.getVal(5)));
+                document.getElementById('nk-pink-p').innerText = formatMoney(cleanNumber(pinkgold.getVal(6)));
+            }
+            if (g965) {
+                document.getElementById('nk-g965-w').innerText = formatMoney(cleanNumber(g965.getVal(5)));
+                document.getElementById('nk-g965-p').innerText = formatMoney(cleanNumber(g965.getVal(6)));
+            }
+
+            document.getElementById('nk-expense').innerText = expense ? formatMoney(cleanNumber(expense.getVal(6))) : "0.00";
+            document.getElementById('nk-opening').innerText = opening ? formatMoney(cleanNumber(opening.getVal(6))) : "0.00";
+            document.getElementById('nk-cash-in').innerText = cashIn ? formatMoney(cleanNumber(cashIn.getVal(6))) : "0.00";
+            document.getElementById('nk-closing').innerText = closing ? formatMoney(cleanNumber(closing.getVal(6))) : "0.00";
+            
+            const nkActualVal = actual ? cleanNumber(actual.getVal(6)) : 0;
+            document.getElementById('nk-actual').innerText = nkActualVal > 0 ? formatMoney(nkActualVal) : "ยังไม่ปิดยอด";
+            
+            if (diff) {
+                const diffVal = cleanNumber(diff.getVal(6));
+                const diffEl = document.getElementById('nk-diff');
+                diffEl.innerText = formatMoney(diffVal);
+                if (diffVal < 0) {
+                    diffEl.className = "font-mono font-bold text-rose-600";
+                } else if (diffVal > 0) {
+                    diffEl.className = "font-mono font-bold text-emerald-600";
+                } else {
+                    diffEl.className = "font-mono font-bold text-slate-500";
+                }
+            }
+
+            // --- 5. พนักงาน: คุณหนึ่ง ---
+            if (gold) {
+                document.getElementById('n1-gold-w').innerText = formatMoney(cleanNumber(gold.getVal(7)));
+                document.getElementById('n1-gold-p').innerText = formatMoney(cleanNumber(gold.getVal(8)));
+            }
+            if (silver) {
+                document.getElementById('n1-silver-w').innerText = formatMoney(cleanNumber(silver.getVal(7)));
+                document.getElementById('n1-silver-p').innerText = formatMoney(cleanNumber(silver.getVal(8)));
+            }
+            if (pinkgold) {
+                document.getElementById('n1-pink-w').innerText = formatMoney(cleanNumber(pinkgold.getVal(7)));
+                document.getElementById('n1-pink-p').innerText = formatMoney(cleanNumber(pinkgold.getVal(8)));
+            }
+
+            // --- 6. พนักงาน: คุณสอง ---
+            if (gold) {
+                document.getElementById('n2-gold-w').innerText = formatMoney(cleanNumber(gold.getVal(9)));
+                document.getElementById('n2-gold-p').innerText = formatMoney(cleanNumber(gold.getVal(10)));
+            }
+            if (silver) {
+                document.getElementById('n2-silver-w').innerText = formatMoney(cleanNumber(silver.getVal(9)));
+                document.getElementById('n2-silver-p').innerText = formatMoney(cleanNumber(silver.getVal(10)));
+            }
+            if (pinkgold) {
+                document.getElementById('n2-pink-w').innerText = formatMoney(cleanNumber(pinkgold.getVal(9)));
+                document.getElementById('n2-pink-p').innerText = formatMoney(cleanNumber(pinkgold.getVal(10)));
+            }
+        }
+
+        // ชุดข้อมูลออฟไลน์สำรองหากโหลดจากเซิร์ฟเวอร์ไม่ได้
+        function renderFallbackData() {
+            const fallbackRows = [
+                ["", "รวมรับซื้อ", "", "266,554.00", "วันที่", "8/7/2026", "", "รายงานรับซื้อประจำวัน จงรักหลอมทอง"],
+                ["", "รายการ", "รวม", "", "ธาตุพนม", "", "นครพนม", "", "คุณหนึ่ง", "", "คุณสอง"],
+                ["", "", "นน.(g)", "เป็นเงิน", "นน.(g)", "เป็นเงิน", "นน.(g)", "เป็นเงิน", "นน.(g)", "เป็นเงิน", "นน.(g)", "เป็นเงิน"],
+                ["", "ทอง", "1,293.64", "2,249,732.00", "3.80", "11,200.00", "0.00", "0.00", "1,289.84", "2,238,532.00", "0.00", "0.00"],
+                ["", "เงิน", "5,629.00", "255,354.00", "0.00", "0.00", "0.00", "0.00", "5,629.00", "255,354.00", "0.00", "0.00"],
+                ["", "นาก", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"],
+                ["", "ทอง 96.5", "0.00", "0.00", "", "", "0.00", "0.00"],
+                ["", "รายจ่าย/จำนำ", "", "1,020.00", "", "1,020.00", "", "0.00"],
+                ["", "เติมเงิน/รับเข้า/ไถ่", "", "7,100.00", "", "7,100.00", "", "0.00"],
+                ["", "เงินต้นวัน", "", "", "", "54,270.00", "", "200,230.00"],
+                ["", "เงินคงเหลือ", "", "", "", "49,150.00", "", "200,230.00"],
+                ["", "พนักงานแจ้งปิดยอด", "", "", "", "49,100.00", "", "200,230.00"],
+                ["", "ขาด/เกิน", "", "", "", "-50.00", "", "0.00"]
+            ];
+            renderDataFromRows(fallbackRows);
+        }
+
+        // เริ่มดึงข้อมูลทันทีเมื่อพร้อม
+        window.onload = function() {
+            fetchSheetData();
+            // ตรวจสอบและดึงข้อมูลใหม่ทุก ๆ 30 วินาทีโดยอัตโนมัติ
+            setInterval(fetchSheetData, 30000); 
+        };
+    </script>
+</body>
+</html>
