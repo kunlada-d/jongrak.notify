@@ -184,7 +184,7 @@
   .cal-day.today .num { background: var(--primary-color); color: var(--white); font-weight: 700; }
 
   .cash-total-card { padding: 24px; }
-  .cash-total-card .lbl { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-bottom: 12px; }
+  .cash-total-card .lbl { font-size: 13px; color: var(--primary-color); font-weight: 600; margin-bottom: 12px; }
 </style>
 </head>
 <body>
@@ -208,8 +208,8 @@
   </div>
   <div class="gta-nav-menu">
     <a href="https://kunlada-d.github.io/jungrak.pricing/" class="gta-menu-link">หน้าหลัก</a>
-    <a href="#" class="gta-menu-link">ราคาย้อนหลัง</a>
-    <a href="#" class="gta-menu-link active">รายงานประจำวัน</a>
+    <a href="price-history.html" class="gta-menu-link">ราคาย้อนหลัง</a>
+    <a href="https://kunlada-d.github.io/jongrak.notify/" class="gta-menu-link active">รายงานประจำวัน</a>
     <a href="https://kunlada-d.github.io/Jongrak.RefiningLab/" target="_blank" class="gta-menu-link">ระบบหลังบ้าน</a>
   </div>
 </div>
@@ -431,7 +431,7 @@
       </div>
 
       <div class="cash-total-card">
-        <div class="lbl">สต็อกคงเหลือ</div>
+        <div class="lbl">สต็อกคงเหลือ (สาขาไทย)</div>
         <table class="branch-mini">
           <thead><tr><th>รายการ</th><th>นน.(g)</th><th>มูลค่า (บาท)</th></tr></thead>
           <tbody>
@@ -441,6 +441,20 @@
             <tr><td>ทอง 96.5%</td><td id="stock-g965-w">0.00</td><td id="stock-g965-p">0.00</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="cash-total-card">
+        <div class="lbl">สต็อกคงเหลือ (ท่าแขก)</div>
+        <table class="branch-mini">
+          <thead><tr><th>รายการ</th><th>นน.(g)</th><th>มูลค่า (บาท)</th></tr></thead>
+          <tbody>
+            <tr><td>ทอง</td><td id="stock-tk-gold-w">0.00</td><td id="stock-tk-gold-p">0.00</td></tr>
+            <tr><td>เงิน</td><td id="stock-tk-silver-w">0.00</td><td id="stock-tk-silver-p">0.00</td></tr>
+            <tr><td>นาก</td><td id="stock-tk-pink-w">0.00</td><td id="stock-tk-pink-p">0.00</td></tr>
+            <tr><td>ทอง 96.5%</td><td id="stock-tk-g965-w">0.00</td><td id="stock-tk-g965-p">0.00</td></tr>
+          </tbody>
+        </table>
+        <div id="stockTkDebug" style="font-size:10.5px; color:var(--rose); margin-top:10px; line-height:1.6; white-space:pre-wrap;"></div>
       </div>
     </aside>
 
@@ -482,6 +496,7 @@ setInterval(loadTickerPrices, PRICE_REFRESH_MS);
    ========================================================= */
 const SPREADSHEET_ID = '1PuHFzpUY3s_ZMRrH5m7cZWIEE7xSiePbgfx_Ts3F9D8';
 const GID = '1018195145';
+const STOCK_GID = '2035241808'; // แท็บ "สต็อก" — มีข้อมูลสต็อกแยกรายสาขา (ท่าแขก ฯลฯ)
 
 function cleanNumber(val) {
   if (!val) return 0;
@@ -539,6 +554,77 @@ function getStockRow(rows, targetLabel) {
   console.warn(`ไม่พบแถวสต็อกของ "${targetLabel}" ในช่วง 10 แถวหลัง 'สต็อกคงเหลือ'`);
   return null;
 }
+
+// อ่านสต็อกแยกรายสาขาจากแท็บ "สต็อก" (คนละโครงสร้างกับ getStockRow ด้านบน)
+// วิธีอ่าน: หาคอลัมน์ที่มีชื่อสาขาอยู่ในแถวหัวข้อบนสุดก่อน แล้วไล่หาแถวที่คอลัมน์เดียวกันมีชื่อรายการ (ทอง/เงิน/นาก/ทอง 96.5)
+// จากนั้นอ่าน 2 คอลัมน์ถัดไปเป็นน้ำหนัก/มูลค่า — ถ้าสาขานั้นไม่มีแถวของรายการนั้นเลย (เช่นไม่มีนากเคลื่อนไหว) จะคืน null แล้วปล่อยเป็น 0.00 ตามค่าเริ่มต้นในหน้า
+function getBranchStockRow(rows, branchLabel, itemLabel) {
+  let branchColIdx = -1;
+  for (const row of rows) {
+    const idx = row.findIndex(c => c && c.trim() === branchLabel);
+    if (idx !== -1) { branchColIdx = idx; break; }
+  }
+  if (branchColIdx === -1) { console.warn(`ไม่พบคอลัมน์สาขา "${branchLabel}" ในแท็บสต็อก`); return null; }
+
+  const wantLabel = itemLabel.replace(/\s+/g, "");
+  for (const row of rows) {
+    const cell = row[branchColIdx];
+    if (cell && cell.trim().replace(/\s+/g, "") === wantLabel) {
+      return { weight: row[branchColIdx + 1] || "0", amount: row[branchColIdx + 2] || "0" };
+    }
+  }
+  return null;
+}
+
+function fetchBranchStock() {
+  const oldScript = document.getElementById('gviz-jsonp-stock');
+  if (oldScript) oldScript.remove();
+
+  const script = document.createElement('script');
+  script.id = 'gviz-jsonp-stock';
+  script.src = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=responseHandler:handleBranchStockResponse&gid=${STOCK_GID}&t=${Date.now()}`;
+  script.onerror = function () {
+    console.warn("ไม่สามารถโหลดสต็อกแยกรายสาขาได้ในขณะนี้");
+  };
+  document.body.appendChild(script);
+}
+
+window.handleBranchStockResponse = function (response) {
+  try {
+    if (!response || !response.table) throw new Error("Invalid gviz response");
+
+    // gviz มักตรวจจับแถว 1 เป็น "หัวตาราง" แล้วดึงออกไปเก็บใน table.cols[i].label
+    // แทนที่จะอยู่ใน table.rows — เลยต้องต่อแถวจาก cols label กลับเข้ามาเป็นแถวแรกด้วย
+    // ไม่งั้นชื่อสาขาอย่าง "ท่าแขก" ที่อยู่แถว 1 จะหายไปจากที่ getBranchStockRow ค้นหา
+    const headerRow = (response.table.cols || []).map(c => c.label || "");
+    const dataRows = response.table.rows.map(r => (r.c || []).map(cell => (cell && cell.v !== null && cell.v !== undefined ? cell.v.toString() : "")));
+    const rows = [headerRow, ...dataRows];
+
+    // DEBUG — โชว์บนตัวหน้าเว็บโดยตรง ไม่ต้องพึ่ง Console เพื่อตัดปัญหาเรื่องแคช/console filter
+    const debugEl = document.getElementById('stockTkDebug');
+    const buildTime = new Date().toLocaleTimeString('th-TH');
+
+    const tkGold = getBranchStockRow(rows, "ท่าแขก", "ทอง");
+    const tkSilver = getBranchStockRow(rows, "ท่าแขก", "เงิน");
+    const tkPink = getBranchStockRow(rows, "ท่าแขก", "นาก");
+    const tkG965 = getBranchStockRow(rows, "ท่าแขก", "ทอง 96.5");
+
+    if (!tkGold && !tkSilver) {
+      // หาคอลัมน์ "ท่าแขก" ไม่เจอเลย — โชว์ว่าจริงๆ แล้วชีทส่ง label แถวแรกมาเป็นอะไรบ้าง
+      debugEl.textContent = `[อัปเดต ${buildTime}] ไม่พบคอลัมน์ "ท่าแขก" — label แถวแรกที่ได้จริง: [${headerRow.map(h => h || "(ว่าง)").join(", ")}]`;
+    } else {
+      debugEl.textContent = `[อัปเดต ${buildTime}] ดึงข้อมูลท่าแขกสำเร็จ`;
+      debugEl.style.color = "var(--jade)";
+    }
+
+    if (tkGold) { setCell('stock-tk-gold-w', cleanNumber(tkGold.weight)); setCell('stock-tk-gold-p', cleanNumber(tkGold.amount)); }
+    if (tkSilver) { setCell('stock-tk-silver-w', cleanNumber(tkSilver.weight)); setCell('stock-tk-silver-p', cleanNumber(tkSilver.amount)); }
+    if (tkPink) { setCell('stock-tk-pink-w', cleanNumber(tkPink.weight)); setCell('stock-tk-pink-p', cleanNumber(tkPink.amount)); }
+    if (tkG965) { setCell('stock-tk-g965-w', cleanNumber(tkG965.weight)); setCell('stock-tk-g965-p', cleanNumber(tkG965.amount)); }
+  } catch (err) {
+    console.error("ประมวลผลสต็อกแยกรายสาขาล้มเหลว:", err);
+  }
+};
 
 function fetchDailyReport() {
   const noticeEl = document.getElementById('syncNotice');
@@ -729,12 +815,9 @@ function renderFallbackData() {
 
 fetchDailyReport();
 setInterval(fetchDailyReport, 30000);
+fetchBranchStock();
+setInterval(fetchBranchStock, 30000);
 
-/* =========================================================
-   ปฏิทินด้านข้าง — แสดงเดือน/วันที่จริง ไฮไลต์วันนี้
-   (ยังไม่มีจุดแสดงยอดรายวันย้อนหลัง เพราะชีทมีแค่ยอดของวันปัจจุบัน
-    ถ้ามีชีทเก็บ log รายวันแยกต่างหาก ค่อยผูกจุดจริงเพิ่มทีหลังได้)
-   ========================================================= */
 let calViewDate = new Date();
 
 function renderCalendar() {
