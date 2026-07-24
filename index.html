@@ -560,17 +560,21 @@ function getStockRow(rows, targetLabel) {
 // จากนั้นอ่าน 2 คอลัมน์ถัดไปเป็นน้ำหนัก/มูลค่า — ถ้าสาขานั้นไม่มีแถวของรายการนั้นเลย (เช่นไม่มีนากเคลื่อนไหว) จะคืน null แล้วปล่อยเป็น 0.00 ตามค่าเริ่มต้นในหน้า
 function getBranchStockRow(rows, branchLabel, itemLabel) {
   let branchColIdx = -1;
-  for (const row of rows) {
+  let branchRowIdx = -1;
+  // ไล่หา "ท่าแขก" ทุกจุดในชีท แล้วใช้ตัว "ล่างสุด" เป็นหลัก เผื่อมีป้ายซ้ำ (เช่นบล็อกเก่าที่ยังไม่ได้ลบ)
+  // เพราะบล็อกที่วางไว้ล่างสุด/ล่าสุดมักเป็นตัวที่ตั้งใจให้ใช้งานจริง
+  rows.forEach((row, i) => {
     const idx = row.findIndex(c => c && c.trim() === branchLabel);
-    if (idx !== -1) { branchColIdx = idx; break; }
-  }
+    if (idx !== -1) { branchColIdx = idx; branchRowIdx = i; }
+  });
   if (branchColIdx === -1) { console.warn(`ไม่พบคอลัมน์สาขา "${branchLabel}" ในแท็บสต็อก`); return null; }
 
   const wantLabel = itemLabel.replace(/\s+/g, "");
-  for (const row of rows) {
-    const cell = row[branchColIdx];
+  // ไล่หารายการ "หลังจากแถวหัวข้อที่เลือกไว้" เท่านั้น กันไปชนกับบล็อกอื่นที่อยู่เหนือขึ้นไป
+  for (let i = branchRowIdx; i < rows.length; i++) {
+    const cell = rows[i][branchColIdx];
     if (cell && cell.trim().replace(/\s+/g, "") === wantLabel) {
-      return { weight: row[branchColIdx + 1] || "0", amount: row[branchColIdx + 2] || "0" };
+      return { weight: rows[i][branchColIdx + 1] || "0", amount: rows[i][branchColIdx + 2] || "0" };
     }
   }
   return null;
@@ -582,7 +586,7 @@ function fetchBranchStock() {
 
   const script = document.createElement('script');
   script.id = 'gviz-jsonp-stock';
-  script.src = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=responseHandler:handleBranchStockResponse&gid=${STOCK_GID}&t=${Date.now()}`;
+  script.src = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=responseHandler:handleBranchStockResponse&gid=${STOCK_GID}&headers=0&t=${Date.now()}`;
   script.onerror = function () {
     console.warn("ไม่สามารถโหลดสต็อกแยกรายสาขาได้ในขณะนี้");
   };
@@ -593,12 +597,9 @@ window.handleBranchStockResponse = function (response) {
   try {
     if (!response || !response.table) throw new Error("Invalid gviz response");
 
-    // gviz มักตรวจจับแถว 1 เป็น "หัวตาราง" แล้วดึงออกไปเก็บใน table.cols[i].label
-    // แทนที่จะอยู่ใน table.rows — เลยต้องต่อแถวจาก cols label กลับเข้ามาเป็นแถวแรกด้วย
-    // ไม่งั้นชื่อสาขาอย่าง "ท่าแขก" ที่อยู่แถว 1 จะหายไปจากที่ getBranchStockRow ค้นหา
-    const headerRow = (response.table.cols || []).map(c => c.label || "");
-    const dataRows = response.table.rows.map(r => (r.c || []).map(cell => (cell && cell.v !== null && cell.v !== undefined ? cell.v.toString() : "")));
-    const rows = [headerRow, ...dataRows];
+    // ขอ headers=0 ตอนดึงแล้ว (ดู fetchBranchStock) — table.rows จะมีครบทุกแถวจริง
+    // ไม่มีแถวไหนถูกเบียดออกไปเป็น header/cols label อีก เลยไม่ต้องผสมกับ table.cols แบบเดิม
+    const rows = response.table.rows.map(r => (r.c || []).map(cell => (cell && cell.v !== null && cell.v !== undefined ? cell.v.toString() : "")));
 
     // DEBUG — โชว์บนตัวหน้าเว็บโดยตรง ไม่ต้องพึ่ง Console เพื่อตัดปัญหาเรื่องแคช/console filter
     const debugEl = document.getElementById('stockTkDebug');
@@ -610,10 +611,11 @@ window.handleBranchStockResponse = function (response) {
     const tkG965 = getBranchStockRow(rows, "ท่าแขก", "ทอง 96.5");
 
     if (!tkGold && !tkSilver) {
-      // หาคอลัมน์ "ท่าแขก" ไม่เจอเลย — โชว์ว่าจริงๆ แล้วชีทส่ง label แถวแรกมาเป็นอะไรบ้าง
-      debugEl.textContent = `[อัปเดต ${buildTime}] ไม่พบคอลัมน์ "ท่าแขก" — label แถวแรกที่ได้จริง: [${headerRow.map(h => h || "(ว่าง)").join(", ")}]`;
+      // หาคอลัมน์ "ท่าแขก" ไม่เจอเลย — โชว์แถวแรกๆ ที่ได้จริงจากชีท จะได้เห็นว่าตำแหน่งเพี้ยนตรงไหน
+      const preview = rows.slice(0, 3).map(r => `[${r.map(c => c || "(ว่าง)").join(", ")}]`).join(" | ");
+      debugEl.textContent = `[อัปเดต ${buildTime}] ไม่พบคอลัมน์ "ท่าแขก" — 3 แถวแรกที่ได้จริง: ${preview}`;
     } else {
-      debugEl.textContent = `[อัปเดต ${buildTime}] ดึงข้อมูลท่าแขกสำเร็จ`;
+      debugEl.textContent = `[อัปเดต ${buildTime}] ดึงข้อมูลท่าแขกสำเร็จ `;
       debugEl.style.color = "var(--jade)";
     }
 
@@ -818,6 +820,11 @@ setInterval(fetchDailyReport, 30000);
 fetchBranchStock();
 setInterval(fetchBranchStock, 30000);
 
+/* =========================================================
+   ปฏิทินด้านข้าง — แสดงเดือน/วันที่จริง ไฮไลต์วันนี้
+   (ยังไม่มีจุดแสดงยอดรายวันย้อนหลัง เพราะชีทมีแค่ยอดของวันปัจจุบัน
+    ถ้ามีชีทเก็บ log รายวันแยกต่างหาก ค่อยผูกจุดจริงเพิ่มทีหลังได้)
+   ========================================================= */
 let calViewDate = new Date();
 
 function renderCalendar() {
