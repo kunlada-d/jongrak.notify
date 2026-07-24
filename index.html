@@ -7,8 +7,6 @@
 <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1Vhd82IcG0O8DZ4QfwYyVCsCPVtVtivrd">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- ใช้ฟอนต์ IBM Plex Sans Thai เพียงฟอนต์เดียวตามคำขอ -->
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -37,7 +35,6 @@
   body {
     background: var(--bg-light);
     color: var(--text-dark);
-    /* บังคับใช้ฟอนต์เดียวทั้งหน้า */
     font-family: 'IBM Plex Sans Thai', sans-serif;
     min-height: 100vh;
   }
@@ -56,14 +53,14 @@
   .ticker-val-gold { color: var(--accent-color); font-weight: 600; }
   @keyframes ticker { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-50%,0,0); } }
 
-  /* ---------- แถบโลโก้หลัก ---------- */
-  /* นำเงาและเส้นขอบออกทั้งหมด */
+
+
   .gta-main-header {
     background: var(--white);
     padding: 16px 40px; display: flex; justify-content: space-between; align-items: center;
     position: sticky; top: 0; z-index: 100;
   }
-  @media (max-width: 900px) {
+  @media (max-width: 1400px) {
     .gta-main-header { flex-direction: column; gap: 15px; padding: 12px 15px; }
     .gta-nav-menu { flex-wrap: wrap; justify-content: center; gap: 14px 20px; }
   }
@@ -75,12 +72,7 @@
   .gta-menu-link:hover, .gta-menu-link.active { color: var(--primary-color); font-weight: 600; border-bottom: 2px solid var(--accent-color); }
 
   /* ---------- โครงหน้ารายงาน (เต็มจอ) ---------- */
-  .page-shell { 
-    width: 100%; 
-    max-width: 100%; /* เปลี่ยนให้ขยายเต็มจอ */
-    margin: 0; 
-    padding: 28px 40px 60px; 
-  }
+  .page-shell { max-width: 1400px; margin: 0 auto; padding: 28px 32px 60px; }
   @media (max-width: 640px) { .page-shell { padding: 18px 20px 40px; } }
   .page-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; }
   .page-head h2 { font-size: 22px; font-weight: 700; color: var(--primary-color); margin: 0 0 4px; }
@@ -118,17 +110,17 @@
   .ticket { padding: 24px; }
   
   .ticket-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-  .ticket-icon { width: 45px; height: 45px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .ticket-icon { width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
   .ticket-icon.gold { background: var(--gold-soft); color: var(--accent-color); }
   .ticket-icon.maroon { background: var(--hair); color: var(--primary-color); }
   .ticket-icon.jade { background: var(--jade-bg); color: var(--jade); }
   .ticket-icon.rose { background: var(--rose-bg); color: var(--rose); }
-  .ticket-label { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+  .ticket-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
   
   .ticket-weight { font-size: 12px; color: var(--text-muted); margin-top: 16px; }
-  .ticket-weight b { font-size: 16px; color: var(--text-dark); font-weight: 600; }
+  .ticket-weight b { font-size: 12px; color: var(--text-dark); font-weight: 600; }
   /* ดันมูลค่าไปล่างสุดเสมอ */
-  .ticket-value { font-weight: 700; font-size: 30px; color: var(--primary-color); margin-top: auto; padding-top: 8px; }
+  .ticket-value { font-weight: 700; font-size: 18px; color: var(--primary-color); margin-top: auto; padding-top: 8px; }
   .ticket-value small { font-size: 12px; font-weight: 400; color: var(--text-muted); }
 
   /* ---------- หัวข้อกลุ่ม ---------- */
@@ -157,8 +149,8 @@
   .branch-mini td:last-child { font-weight: 700; color: var(--primary-color); }
 
   /* ดันกล่องปิดยอดไปด้านล่างเสมอ */
-  .closing-box { margin-top: auto; padding: 16px; border-radius: 12px; background: var(--bg-light); display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 12px; }
-  @media (max-width: 400px) { .closing-box { grid-template-columns: 1fr; } }
+  .closing-box { margin-top: auto; padding: 12px; border-radius: 8px; background: var(--bg-light); display: grid; grid-template-columns: 1fr 1fr; gap: 8px 8px; font-size: 12px; }
+  @media (max-width: 500px) { .closing-box { grid-template-columns: 1fr; } }
   .closing-box .row b { color: var(--text-dark); font-weight: 600; }
   .closing-actual { grid-column: 1/-1; display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding: 10px 14px; border-radius: 8px; background:  var( --gold-soft); }
   .closing-actual span:first-child { font-size: 12px; font-weight: 800; color: var(--accent-color); }
@@ -184,7 +176,7 @@
   .cal-day.today .num { background: var(--primary-color); color: var(--white); font-weight: 700; }
 
   .cash-total-card { padding: 24px; }
-  .cash-total-card .lbl { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-bottom: 12px; }
+  .cash-total-card .lbl { font-size: 16px; color: var(--primary-color); font-weight: 800; margin-bottom: 12px; }
 </style>
 </head>
 <body>
@@ -208,8 +200,8 @@
   </div>
   <div class="gta-nav-menu">
     <a href="https://kunlada-d.github.io/jungrak.pricing/" class="gta-menu-link">หน้าหลัก</a>
-    <a href="#" class="gta-menu-link">ราคาย้อนหลัง</a>
-    <a href="#" class="gta-menu-link active">รายงานประจำวัน</a>
+    <a href="price-history.html" class="gta-menu-link">ราคาย้อนหลัง</a>
+    <a href="https://kunlada-d.github.io/jongrak.notify/" class="gta-menu-link active">รายงานประจำวัน</a>
     <a href="https://kunlada-d.github.io/Jongrak.RefiningLab/" target="_blank" class="gta-menu-link">ระบบหลังบ้าน</a>
   </div>
 </div>
@@ -267,7 +259,7 @@
         </div>
         <div class="ticket">
           <div class="ticket-top">
-            <div class="ticket-icon jade"><i class="fa-solid fa-money-check"></i></i></div>
+            <div class="ticket-icon maroon"><i class="fa-solid fa-money-check"></i></i></div>
             <span class="ticket-label">เงิน</span>
           </div>
           <div class="ticket-weight">น้ำหนักรวม <b id="typeSilverW">0.00</b> g</div>
@@ -283,7 +275,7 @@
         </div>
         <div class="ticket">
           <div class="ticket-top">
-            <div class="ticket-icon maroon"><i class="fa-solid fa-scale-balanced"></i></div>
+            <div class="ticket-icon gold"><i class="fa-solid fa-scale-balanced"></i></div>
             <span class="ticket-label">ทอง 96.5%</span>
           </div>
           <div class="ticket-weight">น้ำหนักรวม <b id="typeG965W">0.00</b> g</div>
@@ -336,7 +328,9 @@
               </tbody>
             </table>
             <div class="closing-box">
-              <div class="row"><span>รายจ่าย/จำนำ:</span><b id="nk-expense">0.00</b></div>
+              <div class="row"><span>รายจ่าย/จำนำ:
+
+              </span><b id="nk-expense">0.00</b></div>
               <div class="row"><span>เงินต้นวัน:</span><b id="nk-opening">0.00</b></div>
               <div class="row"><span>เติมเงิน/รับเข้า:</span><b id="nk-cash-in">0.00</b></div>
               <div class="row"><span>เงินคงเหลือ:</span><b id="nk-closing">0.00</b></div>
